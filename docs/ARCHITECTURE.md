@@ -37,23 +37,29 @@ backend/
 │   ├── config/
 │   │   ├── env.js              # loads + validates process.env once, exports typed config object
 │   │   └── db.js                # mongoose.connect() + connection event logging
+│   ├── constants/
+│   │   └── categoryPresets.js   # curated icon keys, curated colors, default category seed data
 │   ├── models/
 │   │   ├── user.model.js
 │   │   ├── otp.model.js
+│   │   ├── category.model.js
 │   │   └── expense.model.js
 │   ├── controllers/
 │   │   ├── auth.controller.js
+│   │   ├── category.controller.js
 │   │   ├── expense.controller.js
 │   │   ├── analytics.controller.js
 │   │   └── export.controller.js
 │   ├── services/
 │   │   ├── auth.service.js
 │   │   ├── otp.service.js       # OTP generation/verification, pluggable SMS sender
+│   │   ├── category.service.js  # CRUD + default-category seeding on signup
 │   │   ├── expense.service.js
 │   │   ├── analytics.service.js
 │   │   └── export.service.js
 │   ├── routes/
 │   │   ├── auth.routes.js
+│   │   ├── category.routes.js
 │   │   ├── expense.routes.js
 │   │   ├── analytics.routes.js
 │   │   ├── export.routes.js
@@ -64,11 +70,13 @@ backend/
 │   │   ├── validate.middleware.js # runs a zod schema against req, 400s on failure
 │   │   └── rateLimiter.middleware.js
 │   ├── validators/
-│   │   ├── auth.validator.js    # zod schemas for signup/login/otp payloads
-│   │   └── expense.validator.js
+│   │   ├── auth.validator.js    # zod schemas for otp request/verify payloads
+│   │   ├── category.validator.js
+│   │   ├── expense.validator.js
+│   │   ├── analytics.validator.js
+│   │   └── common.validator.js  # shared idParamSchema for :id routes
 │   ├── utils/
 │   │   ├── ApiError.js          # custom error class (statusCode + message)
-│   │   ├── asyncHandler.js      # wraps async controllers, forwards errors to next()
 │   │   ├── jwt.util.js          # sign/verify
 │   │   ├── hash.util.js         # bcrypt wrappers for passwords + OTP codes
 │   │   ├── otp.util.js          # random code generation
@@ -81,9 +89,9 @@ backend/
 └── package.json
 ```
 
-`src/index.js` (currently empty) will be replaced by `src/server.js` as the
-real entry point — update `package.json`'s `main` and `scripts.start`/`dev`
-accordingly when this is scaffolded.
+`src/server.js` is the real entry point (`src/index.js` was the original
+empty scaffold placeholder and has been removed); `package.json`'s `main`
+and `scripts.start`/`dev` point at it.
 
 ## Why no TypeScript
 
@@ -96,35 +104,45 @@ worse than none.
 
 ## Request validation
 
-Every mutating endpoint (POST/PUT/PATCH) validates its body with a `zod`
-schema via `validate.middleware.js` before it reaches the controller.
-Validation schemas live in `validators/`, one file per domain. This is the
-only place shape/type checking happens — controllers and services trust that
-validated data is well-formed.
+Every endpoint that takes a body, query, or `:id` param validates it with a
+`zod` schema via `validate.middleware.js` before it reaches the controller.
+Validation schemas live in `validators/`, one file per domain.
+
+**Controllers read from `req.valid.{body,query,params}`, never
+`req.body`/`req.query`/`req.params` directly.** This matters more than it
+sounds: `req.query` in Express 5 is a getter-only accessor with no setter —
+confirmed against the installed `express@5.2.1` — so reassigning it (e.g. to
+write back zod's coerced/defaulted values) is a silent no-op, not an error.
+`validate.middleware.js` works around this by stashing the parsed result on
+`req.valid` instead of trying to mutate `req.query` in place. If a controller
+ever reads `req.query.page` directly, it'll get the raw un-coerced string (or
+`undefined` if the client omitted it) instead of zod's validated/defaulted
+number — a subtle bug. Always go through `req.valid`.
 
 ## Error handling
 
 - Services throw `ApiError(statusCode, message)` for expected failures
   (invalid credentials, OTP expired, not found, etc.).
-- `asyncHandler` wraps every controller so thrown/rejected errors reach
-  `error.middleware.js` automatically — no manual try/catch in controllers.
+- Express 5 automatically forwards both sync throws and rejected promises
+  from async route handlers/middleware to the error middleware — no
+  `asyncHandler` wrapper or manual try/catch needed in controllers.
 - `error.middleware.js` is the single place that formats error responses and
   decides what's safe to expose to the client vs. only logged.
 
 ## Auth flow
 
-Two signup/login paths, same JWT output:
+**v1 is phone + OTP only** — signup and login are the same flow, there's no
+separate "create account" step. Email/password schema fields exist for a
+later addition but no endpoints are built for it yet.
 
-**Email + password**
-1. `POST /api/auth/signup/email` — hash password (bcrypt), create user, issue JWT.
-2. `POST /api/auth/login/email` — verify password hash, issue JWT.
-
-**Phone + OTP**
 1. `POST /api/auth/otp/request` — generate 6-digit code, hash it, store in
    `otps` collection with a 5-minute TTL index, send via the SMS provider
    interface (see below). Rate-limited per phone number.
 2. `POST /api/auth/otp/verify` — check code against stored hash + expiry +
-   attempt count. On success: find-or-create user by phone, issue JWT.
+   attempt count. On success: find-or-create user by phone; if this created a
+   new user, seed their default categories (`category.service.js`) in the
+   same call before issuing the JWT — a brand new user should never hit the
+   expense screen with an empty category list.
 
 **SMS provider is pluggable.** `services/otp.service.js` calls an injected
 `sendSms(phone, code)` function. Dev implementation logs the code to the

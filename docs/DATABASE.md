@@ -1,7 +1,15 @@
 # Database Design
 
-MongoDB via Mongoose. Three collections. Every field below is justified —
+MongoDB via Mongoose. Four collections. Every field below is justified —
 don't add a field without updating this doc in the same change.
+
+> **Update (2026-09-16):** categories are now a full user-owned collection
+> with CRUD, not a fixed enum — the user asked for category CRUD explicitly.
+> The original "fixed enum" reasoning below the `expenses` table is kept as a
+> record of why we started there, but it's superseded by the `categories`
+> section. Auth is also OTP-only for v1 (see `users` notes) — email/password
+> fields stay in the schema for a future add, but no email/password endpoints
+> are being built right now.
 
 ## `users`
 
@@ -24,6 +32,11 @@ actually grows.
 
 **Indexes:** unique+sparse on `email`, unique+sparse on `phone` (enforces "no
 two accounts with the same email/phone" while allowing either to be absent).
+
+**v1 scope note:** only the phone+OTP path is wired up right now (signup and
+login are the same flow — verify OTP, find-or-create by phone). Email/password
+fields exist so that path is a pure addition later, not a migration, but no
+email endpoints exist yet.
 
 ## `otps`
 
@@ -55,7 +68,7 @@ resist adding anything here that isn't asked for.
 | `userId`      | ObjectId, ref `User`, required | Every expense belongs to exactly one user. |
 | `amount`      | Number, required, min 0 | Stored as a plain number in the user's currency (see `users.currency`) — no multi-currency conversion in v1. |
 | `description` | String, required, max ~120 chars | Free text, kept short intentionally — this is a label, not notes. |
-| `category`    | String, enum, required | Fixed enum for v1 (Food, Transport, Shopping, Bills, Entertainment, Health, Other) — see "Why categories are an enum" below. |
+| `category`    | ObjectId, ref `Category`, required | See `categories` collection below. |
 | `date`        | Date, required, default now | The date the expense actually happened — distinct from `createdAt`. This is what analytics filters and CSV export use. User can backdate an entry (e.g. logging yesterday's coffee). |
 | `createdAt` / `updatedAt` | Date (Mongoose timestamps) | Audit trail only — never used for filtering/analytics, that's what `date` is for. |
 
@@ -64,18 +77,54 @@ resist adding anything here that isn't asked for.
 `date` range, then usually sorts by `date` descending. This one index serves
 all three.
 
-**Why categories are an enum, not a collection:** making categories
-user-editable would mean a whole CRUD surface (create/rename/delete category,
-handle what happens to expenses when a category is deleted) for a feature
-that isn't part of the minimal spec. A fixed enum keeps the entry form fast
-(a chip picker, no "create new category" flow) and keeps the schema simple.
-If custom categories are wanted later, this is a contained migration: add a
-`categories` collection, migrate the enum values as seed data, change
-`expenses.category` from enum-string to an ObjectId ref.
+*(Superseded — kept for history: categories started as a fixed enum to avoid
+a CRUD surface. The user explicitly asked for category CRUD, so this is now
+the `categories` collection below instead.)*
 
-Default category set (icon/color mapping lives in the frontend design system,
-not the DB):
-`Food`, `Transport`, `Shopping`, `Bills`, `Entertainment`, `Health`, `Other`.
+## `categories`
+
+User-owned, not global — each user gets their own editable set, seeded with
+defaults at signup. A per-user collection (rather than a shared global list
+users pick from) because "CRUD category" implies rename/recolor/delete should
+only ever affect that one user's data, never other users.
+
+| Field         | Type    | Notes |
+|---------------|---------|-------|
+| `_id`         | ObjectId | |
+| `userId`      | ObjectId, ref `User`, required | Owner. |
+| `name`        | String, required, max ~30 chars | |
+| `icon`        | String, required | Key into a fixed icon set the frontend maps to a Material icon — see `frontend/docs/DESIGN_SYSTEM.md`. Not a free-form icon upload — keeps the picker a curated grid, not a mess. |
+| `color`       | String (hex), required | Picked from a curated palette (design system), not a free color picker — keeps categories visually consistent instead of clashing. |
+| `isDeletable` | Boolean, default `true` | `false` only for the seeded `Other` category — it's the fallback target when another category is deleted (see below), so it must always exist. |
+| `createdAt` / `updatedAt` | Date | |
+
+**Indexes:** compound unique index on `{ userId: 1, name: 1 }` — no duplicate
+category names within one user's set (case-insensitive collation).
+
+**Seeding:** on account creation, seed each user with the default set below.
+These are just normal rows owned by that user (`isDeletable: true` except
+`Other`) — "default" only describes how they were created, not a special type
+the code branches on afterward.
+
+Default category set:
+
+| Name | Icon key | Color |
+|------|----------|-------|
+| Food | `restaurant` | amber |
+| Transport | `directions_car` | blue |
+| Shopping | `shopping_bag` | violet |
+| Bills | `receipt_long` | red-orange |
+| Entertainment | `movie` | pink |
+| Health | `favorite` | teal |
+| Other | `category` | gray — `isDeletable: false` |
+
+**Deleting a category:** any expense currently pointing at the deleted
+category is reassigned to that user's `Other` category (single update-many,
+done in the same service call before the delete) — never leaves an expense
+with a dangling category reference, and never blocks the delete with a "still
+in use" error, which would be a worse experience for a feature this small.
+`Other` itself cannot be deleted (`isDeletable: false`, enforced in the
+service) since it's the reassignment target.
 
 ## Explicitly not modeled (yet)
 

@@ -48,7 +48,10 @@ async function getTrend(userId, period, anchor) {
     { $match: { userId: userObjectId, date: { $gte: start, $lt: end } } },
     {
       $group: {
-        _id: { $dateTrunc: { date: '$date', unit, timezone: 'UTC' } },
+        // 'Asia/Kolkata' to match getDateRange's IST assumption (see dateRange.util.js) —
+        // grouping in UTC here while filtering IST-aligned bounds above would put
+        // expenses in the wrong bucket near day boundaries.
+        _id: { $dateTrunc: { date: '$date', unit, timezone: 'Asia/Kolkata' } },
         total: { $sum: '$amount' },
       },
     },

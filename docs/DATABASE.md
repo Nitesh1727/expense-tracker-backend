@@ -7,9 +7,15 @@ don't add a field without updating this doc in the same change.
 > with CRUD, not a fixed enum — the user asked for category CRUD explicitly.
 > The original "fixed enum" reasoning below the `expenses` table is kept as a
 > record of why we started there, but it's superseded by the `categories`
-> section. Auth is also OTP-only for v1 (see `users` notes) — email/password
-> fields stay in the schema for a future add, but no email/password endpoints
-> are being built right now.
+> section.
+>
+> **Update (2026-09-16, later same day):** email+password signup/login is now
+> also implemented, alongside phone+OTP — both create the same shape of user
+> (default categories seeded either way). `name` and `email` can additionally
+> be set/edited any time via `PATCH /api/auth/me`, independent of which method
+> was used to sign up — a phone user can add an email as a contact-info field
+> without that becoming a second login method (no password gets attached
+> unless they go through the separate email signup flow).
 
 ## `users`
 
@@ -33,10 +39,16 @@ actually grows.
 **Indexes:** unique+sparse on `email`, unique+sparse on `phone` (enforces "no
 two accounts with the same email/phone" while allowing either to be absent).
 
-**v1 scope note:** only the phone+OTP path is wired up right now (signup and
-login are the same flow — verify OTP, find-or-create by phone). Email/password
-fields exist so that path is a pure addition later, not a migration, but no
-email endpoints exist yet.
+**Sensitive field handling:** `passwordHash` has `select: false`, but that
+only suppresses it from *query* results — a document already loaded in
+memory (what `.create()` returns, or after an explicit
+`.select('+passwordHash')` to check a login) still carries it, and would
+leak into a `res.json({ user })` response. Caught in manual testing: both
+signup and login were leaking the hash. Fixed with a schema-level `toJSON`
+transform (`user.model.js`) that strips it unconditionally — the one place
+that guarantees it never reaches a response regardless of how the document
+was loaded, rather than relying on remembering to `.select('-passwordHash')`
+at every call site.
 
 ## `otps`
 

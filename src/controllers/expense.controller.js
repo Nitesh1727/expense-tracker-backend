@@ -10,6 +10,11 @@ async function list(req, res) {
   res.status(200).json(result);
 }
 
+async function dailySummary(req, res) {
+  const result = await expenseService.getDailySummary(req.userId, req.valid.query);
+  res.status(200).json(result);
+}
+
 async function getOne(req, res) {
   const expense = await expenseService.getExpenseById(req.userId, req.valid.params.id);
   res.status(200).json({ expense });
@@ -25,4 +30,4 @@ async function remove(req, res) {
   res.status(204).send();
 }
 
-module.exports = { create, list, getOne, update, remove };
+module.exports = { create, list, dailySummary, getOne, update, remove };

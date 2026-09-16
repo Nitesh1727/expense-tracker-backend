@@ -29,4 +29,18 @@ const userSchema = new Schema(
   { timestamps: true },
 );
 
+// `select: false` on passwordHash only suppresses it in *query* results — a
+// document that's already loaded (what .create() returns, or after login
+// explicitly does .select('+passwordHash') to check the password) still has
+// it in memory and would serialize it into any `res.json({ user })`. Caught
+// in manual testing: signup and login responses were both leaking the hash.
+// This transform is the one place that guarantees it never reaches a
+// response, regardless of how the document got loaded.
+userSchema.set('toJSON', {
+  transform: (_doc, ret) => {
+    delete ret.passwordHash;
+    return ret;
+  },
+});
+
 module.exports = model('User', userSchema);

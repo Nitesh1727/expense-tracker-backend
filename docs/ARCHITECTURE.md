@@ -131,18 +131,31 @@ number — a subtle bug. Always go through `req.valid`.
 
 ## Auth flow
 
-**v1 is phone + OTP only** — signup and login are the same flow, there's no
-separate "create account" step. Email/password schema fields exist for a
-later addition but no endpoints are built for it yet.
+Two independent paths, both producing the same shape of user (both seed
+default categories via `category.service.js` on creation — a brand new user
+should never hit the expense screen with an empty category list):
 
+**Phone + OTP** — signup and login are the same flow, there's no separate
+"create account" step:
 1. `POST /api/auth/otp/request` — generate 6-digit code, hash it, store in
    `otps` collection with a 5-minute TTL index, send via the SMS provider
    interface (see below). Rate-limited per phone number.
 2. `POST /api/auth/otp/verify` — check code against stored hash + expiry +
-   attempt count. On success: find-or-create user by phone; if this created a
-   new user, seed their default categories (`category.service.js`) in the
-   same call before issuing the JWT — a brand new user should never hit the
-   expense screen with an empty category list.
+   attempt count. On success: find-or-create user by phone, issue JWT.
+
+**Email + password** — a normal separate signup/login pair:
+1. `POST /api/auth/signup/email` — 409 if the email is already registered,
+   otherwise hash the password (bcrypt) and create the user.
+2. `POST /api/auth/login/email` — verify the password hash. Both a wrong
+   email and a wrong password return the same 401 message, so a failed
+   attempt never reveals whether an email is registered.
+
+**Optional profile completion, either path:** `PATCH /api/auth/me` accepts
+`{ name?, email? }` and is deliberately the *same* endpoint whether it's used
+right after signup (a skippable "tell us your name" prompt) or edited later
+from the Profile screen — no separate "complete profile" endpoint. Setting
+`email` here on a phone-signed-up account is just a contact-info field, not a
+second login credential, since no password gets attached by this call.
 
 **SMS provider is pluggable.** `services/otp.service.js` calls an injected
 `sendSms(phone, code)` function. Dev implementation logs the code to the

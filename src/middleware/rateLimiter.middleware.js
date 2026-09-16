@@ -17,4 +17,13 @@ const otpVerifyLimiter = rateLimit({
   message: { error: { message: 'Too many attempts, please try again later' } },
 });
 
-module.exports = { otpRequestLimiter, otpVerifyLimiter };
+/** Same shape as otpVerifyLimiter — guards email login against password guessing. */
+const emailAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { message: 'Too many attempts, please try again later' } },
+});
+
+module.exports = { otpRequestLimiter, otpVerifyLimiter, emailAuthLimiter };

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Expense = require('../models/expense.model');
 const Category = require('../models/category.model');
 const ApiError = require('../utils/ApiError');
@@ -77,6 +78,44 @@ async function deleteAllForUser(userId) {
   await Expense.deleteMany({ userId });
 }
 
+/**
+ * Powers the Home feed's collapsible day-tiles: one row per calendar day
+ * that has at least one expense, newest first, paginated by NUMBER OF DAYS
+ * (not number of expenses) — so a page boundary never splits a single day's
+ * total across two pages. Tiles start collapsed showing just this total;
+ * expanding one fetches that day's actual items via listExpenses/findInRange
+ * with a one-day {from, to} range, rather than embedding items here.
+ *
+ * Buckets in IST via $dateTrunc, matching analytics.service.js — see
+ * backend/src/utils/dateRange.util.js for why UTC bucketing was wrong.
+ */
+async function getDailySummary(userId, { page, limit }) {
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
+  const [result] = await Expense.aggregate([
+    { $match: { userId: userObjectId } },
+    {
+      $group: {
+        _id: { $dateTrunc: { date: '$date', unit: 'day', timezone: 'Asia/Kolkata' } },
+        total: { $sum: '$amount' },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: -1 } },
+    {
+      $facet: {
+        days: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+        totalCount: [{ $count: 'count' }],
+      },
+    },
+  ]);
+
+  const days = result.days.map((d) => ({ date: d._id, total: d.total, count: d.count }));
+  const totalDays = result.totalCount[0]?.count ?? 0;
+
+  return { days, page, limit, totalDays, hasMore: page * limit < totalDays };
+}
+
 /** Used by both analytics and export — same filter shape as listExpenses, no pagination. */
 async function findInRange(userId, { from, to, categoryId } = {}) {
   const filter = { userId };
@@ -97,5 +136,6 @@ module.exports = {
   updateExpense,
   deleteExpense,
   deleteAllForUser,
+  getDailySummary,
   findInRange,
 };

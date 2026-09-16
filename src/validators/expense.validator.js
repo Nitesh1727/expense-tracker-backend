@@ -31,6 +31,13 @@ const listExpensesSchema = z.object({
   }),
 });
 
+const dailySummarySchema = z.object({
+  query: z.object({
+    page: z.coerce.number().int().positive().default(1),
+    limit: z.coerce.number().int().positive().max(60).default(15),
+  }),
+});
+
 const exportQuerySchema = z.object({
   query: z.object({
     from: z.coerce.date().optional(),
@@ -39,4 +46,11 @@ const exportQuerySchema = z.object({
   }),
 });
 
-module.exports = { createExpenseSchema, updateExpenseSchema, listExpensesSchema, exportQuerySchema, objectId };
+module.exports = {
+  createExpenseSchema,
+  updateExpenseSchema,
+  listExpensesSchema,
+  dailySummarySchema,
+  exportQuerySchema,
+  objectId,
+};

@@ -15,8 +15,11 @@ schema-ready for later but has no endpoints yet, see DATABASE.md).
 | Method | Path | Auth? | Body | Notes |
 |--------|------|-------|------|-------|
 | POST | `/otp/request` | No | `{ phone }` | Generates + sends OTP. Rate-limited. Returns `{ success: true }` (dev env also echoes the code — see ARCHITECTURE.md). |
-| POST | `/otp/verify` | No | `{ phone, code }` | Verifies code; finds-or-creates user (seeding default categories if new); returns `{ user, token }`. |
+| POST | `/otp/verify` | No | `{ phone, code }` | Verifies code; finds-or-creates user (seeding default categories if new); returns `{ user, token, isNewUser }` — the frontend uses `isNewUser` to decide whether to show the optional "tell us your name" prompt. |
+| POST | `/signup/email` | No | `{ email, password, name? }` | Creates a user the same way as the OTP path (seeds default categories). 409 if the email is already registered. |
+| POST | `/login/email` | No | `{ email, password }` | 401 on either a wrong email or wrong password — never reveals which, to avoid leaking whether an email is registered. |
 | GET | `/me` | Yes | — | Returns current user profile. |
+| PATCH | `/me` | Yes | `{ name?, email? }` | Partial profile update — used for both the optional post-signup "complete your profile" prompt and later edits from the Profile screen. Works regardless of signup method; setting `email` here is just a contact-info field, not a second login method (no password gets attached). 409 if the email is already used by another account. |
 | DELETE | `/me` | Yes | — | Deletes account + cascades delete of the user's expenses and categories. Store-compliance requirement, not optional. |
 
 ## Expenses — `/api/expenses`
@@ -28,6 +31,7 @@ a user can never see/modify another user's expenses.
 |--------|------|---------------|-------|
 | POST | `/` | `{ amount, description, categoryId, date? }` | `date` defaults to now if omitted. |
 | GET | `/` | query: `from?, to?, categoryId?, page?, limit?` | List, most recent first. Date range optional (unbounded if omitted). Response items have `category` populated (`{id, name, icon, color}`), not just the raw id. |
+| GET | `/daily-summary` | `page?, limit?` (default 15, max 60) | Powers the Home feed's collapsible day-tiles: one row per calendar day with an expense, `{date, total, count}`, newest first. Paginated by **number of days**, not number of expenses, so a page boundary never splits one day's total. Expand a tile client-side by calling the plain list endpoint above with that day as `{from, to}`. |
 | GET | `/:id` | — | Single expense, `category` populated. |
 | PUT | `/:id` | `{ amount?, description?, categoryId?, date? }` | Partial update. |
 | DELETE | `/:id` | — | |

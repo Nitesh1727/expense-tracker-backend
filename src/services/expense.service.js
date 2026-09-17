@@ -27,7 +27,15 @@ async function listExpenses(userId, { from, to, categoryId, page, limit }) {
   if (from || to) {
     filter.date = {};
     if (from) filter.date.$gte = from;
-    if (to) filter.date.$lte = to;
+    // $lt (exclusive), not $lte — matches the [start, end) convention used
+    // everywhere else (dateRange.util.js, getDailySummary). This used to be
+    // $lte, and DayTile's per-day expand fetch passes `to` as the exclusive
+    // start of the *next* day — an expense whose date picker produced an
+    // exact-midnight timestamp (routine: showDatePicker returns local
+    // midnight) landed exactly on that boundary and, with $lte, matched
+    // both the day it belonged to *and* the day before it. Caught live: an
+    // expense dated the 14th was also showing up under the 13th.
+    if (to) filter.date.$lt = to;
   }
   if (categoryId) filter.category = categoryId;
 
@@ -122,7 +130,7 @@ async function findInRange(userId, { from, to, categoryId } = {}) {
   if (from || to) {
     filter.date = {};
     if (from) filter.date.$gte = from;
-    if (to) filter.date.$lte = to;
+    if (to) filter.date.$lt = to; // exclusive — see listExpenses for why
   }
   if (categoryId) filter.category = categoryId;
 

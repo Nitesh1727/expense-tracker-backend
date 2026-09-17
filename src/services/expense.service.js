@@ -8,10 +8,11 @@ async function assertCategoryOwnedByUser(userId, categoryId) {
   if (!category) {
     throw new ApiError(400, 'Category not found');
   }
+  return category;
 }
 
 async function createExpense(userId, { amount, description, categoryId, date }) {
-  await assertCategoryOwnedByUser(userId, categoryId);
+  const category = await assertCategoryOwnedByUser(userId, categoryId);
   const expense = await Expense.create({
     userId,
     amount,
@@ -19,7 +20,16 @@ async function createExpense(userId, { amount, description, categoryId, date }) 
     category: categoryId,
     date: date ?? new Date(),
   });
-  return expense.populate('category');
+  // Reuses the category doc already fetched for ownership validation instead
+  // of a second round-trip via .populate('category') (which would re-fetch
+  // the exact same document by _id) — one fewer DB query per create, same
+  // response shape. Built as a plain object rather than mutating the
+  // Mongoose document's `category` path directly, since that path is typed
+  // as an ObjectId and a raw assignment would get cast back down to just the
+  // id instead of keeping the populated fields.
+  const result = expense.toObject();
+  result.category = category.toObject();
+  return result;
 }
 
 async function listExpenses(userId, { from, to, categoryId, page, limit }) {

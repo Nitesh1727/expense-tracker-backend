@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
-const Expense = require('../models/expense.model');
-const Category = require('../models/category.model');
-const { getDateRange, getTrendBucketUnit } = require('../utils/dateRange.util');
+import mongoose from 'mongoose';
+import Expense from '../models/expense.model.js';
+import Category from '../models/category.model.js';
+import { getDateRange, getTrendBucketUnit } from '../utils/dateRange.util.js';
 
 /**
  * Aggregation pipelines rather than pulling expenses into Node and summing
@@ -66,4 +66,4 @@ async function getTrend(userId, period, anchor) {
   };
 }
 
-module.exports = { getSummary, getTrend };
+export { getSummary, getTrend };

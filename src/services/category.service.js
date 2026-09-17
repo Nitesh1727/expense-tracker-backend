@@ -1,7 +1,7 @@
-const Category = require('../models/category.model');
-const Expense = require('../models/expense.model');
-const ApiError = require('../utils/ApiError');
-const { DEFAULT_CATEGORIES } = require('../constants/categoryPresets');
+import Category from '../models/category.model.js';
+import Expense from '../models/expense.model.js';
+import ApiError from '../utils/ApiError.js';
+import { DEFAULT_CATEGORIES } from '../constants/categoryPresets.js';
 
 /** Called once, right after a new user is created — see auth.service.js. */
 async function seedDefaultCategories(userId) {
@@ -46,4 +46,4 @@ async function deleteCategory(userId, categoryId) {
   await category.deleteOne();
 }
 
-module.exports = { seedDefaultCategories, listCategories, createCategory, updateCategory, deleteCategory };
+export { seedDefaultCategories, listCategories, createCategory, updateCategory, deleteCategory };

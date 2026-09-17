@@ -1,7 +1,9 @@
-const express = require('express');
-const cors = require('cors');
-const routes = require('./routes');
-const errorMiddleware = require('./middleware/error.middleware');
+import express from 'express';
+import cors from 'cors';
+// ESM needs the explicit /index.js — unlike CommonJS, Node doesn't resolve a
+// bare directory import to its index file automatically.
+import routes from './routes/index.js';
+import errorMiddleware from './middleware/error.middleware.js';
 
 const app = express();
 
@@ -15,4 +17,4 @@ app.use('/api', routes);
 // Must be registered after all routes — Express identifies error middleware by its 4-arg signature.
 app.use(errorMiddleware);
 
-module.exports = app;
+export default app;

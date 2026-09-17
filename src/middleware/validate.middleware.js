@@ -1,4 +1,4 @@
-const ApiError = require('../utils/ApiError');
+import ApiError from '../utils/ApiError.js';
 
 /**
  * Runs a zod schema against { body, query, params } and stashes the parsed
@@ -23,4 +23,4 @@ function validate(schema) {
   };
 }
 
-module.exports = validate;
+export default validate;

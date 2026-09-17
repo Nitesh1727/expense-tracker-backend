@@ -1,4 +1,4 @@
-const authService = require('../services/auth.service');
+import * as authService from '../services/auth.service.js';
 
 async function requestOtp(req, res) {
   const { phone } = req.valid.body;
@@ -37,4 +37,4 @@ async function deleteMe(req, res) {
   res.status(204).send();
 }
 
-module.exports = { requestOtp, verifyOtp, signupEmail, loginEmail, getMe, updateMe, deleteMe };
+export { requestOtp, verifyOtp, signupEmail, loginEmail, getMe, updateMe, deleteMe };

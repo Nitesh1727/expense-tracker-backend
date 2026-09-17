@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
-const Expense = require('../models/expense.model');
-const Category = require('../models/category.model');
-const ApiError = require('../utils/ApiError');
+import mongoose from 'mongoose';
+import Expense from '../models/expense.model.js';
+import Category from '../models/category.model.js';
+import ApiError from '../utils/ApiError.js';
 
 async function assertCategoryOwnedByUser(userId, categoryId) {
   const category = await Category.findOne({ _id: categoryId, userId });
@@ -147,13 +147,4 @@ async function findInRange(userId, { from, to, categoryId } = {}) {
   return Expense.find(filter).sort({ date: -1 }).populate('category');
 }
 
-module.exports = {
-  createExpense,
-  listExpenses,
-  getExpenseById,
-  updateExpense,
-  deleteExpense,
-  deleteAllForUser,
-  getDailySummary,
-  findInRange,
-};
+export { createExpense, listExpenses, getExpenseById, updateExpense, deleteExpense, deleteAllForUser, getDailySummary, findInRange };

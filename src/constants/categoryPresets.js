@@ -50,4 +50,4 @@ const DEFAULT_CATEGORIES = [
   { name: 'Other', icon: 'category', color: '#6B7280', isDeletable: false },
 ];
 
-module.exports = { ICON_KEYS, COLOR_HEXES, DEFAULT_CATEGORIES };
+export { ICON_KEYS, COLOR_HEXES, DEFAULT_CATEGORIES };

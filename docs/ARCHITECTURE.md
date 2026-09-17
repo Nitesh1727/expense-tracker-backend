@@ -1,7 +1,18 @@
 # Backend Architecture
 
-Node.js + Express 5 + MongoDB (Mongoose). Plain JavaScript, CommonJS — no
-TypeScript by design (see "Why no TypeScript" below).
+Node.js + Express 5 + MongoDB (Mongoose). Plain JavaScript, ES modules
+(`import`/`export`, `"type": "module"` in package.json) — no TypeScript by
+design (see "Why no TypeScript" below). Was CommonJS originally; converted
+per explicit user request. Two things that don't come up in CommonJS: every
+relative import needs its explicit `.js` extension (`./foo.js`, not `./foo`
+— ESM doesn't resolve extensions or directory `index.js` files implicitly),
+and a module with several named exports (most services/controllers) uses a
+single `export { a, b, c };` at the bottom rather than `export const`/
+`export function` at each declaration — keeps the diff from the CommonJS
+version minimal and every export visible in one place. `scripts/seed-demo-account.cjs`
+is the one exception, kept as CommonJS via the explicit `.cjs` extension
+(which always overrides the package's `"type"` for that one file) rather
+than converted, since it wasn't part of that day's work.
 
 ## Layering rule
 

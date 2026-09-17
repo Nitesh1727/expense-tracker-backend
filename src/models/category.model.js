@@ -1,5 +1,7 @@
-const { Schema, model } = require('mongoose');
-const { ICON_KEYS, COLOR_HEXES } = require('../constants/categoryPresets');
+import mongoose from 'mongoose';
+import { ICON_KEYS, COLOR_HEXES } from '../constants/categoryPresets.js';
+
+const { Schema, model } = mongoose;
 
 const categorySchema = new Schema(
   {
@@ -16,4 +18,4 @@ const categorySchema = new Schema(
 
 categorySchema.index({ userId: 1, name: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } });
 
-module.exports = model('Category', categorySchema);
+export default model('Category', categorySchema);

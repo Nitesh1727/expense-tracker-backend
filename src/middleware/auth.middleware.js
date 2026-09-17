@@ -1,6 +1,6 @@
-const ApiError = require('../utils/ApiError');
-const { verifyToken } = require('../utils/jwt.util');
-const User = require('../models/user.model');
+import ApiError from '../utils/ApiError.js';
+import { verifyToken } from '../utils/jwt.util.js';
+import User from '../models/user.model.js';
 
 async function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -30,4 +30,4 @@ async function requireAuth(req, res, next) {
   next();
 }
 
-module.exports = requireAuth;
+export default requireAuth;

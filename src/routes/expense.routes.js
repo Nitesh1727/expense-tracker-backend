@@ -1,14 +1,16 @@
-const { Router } = require('express');
-const expenseController = require('../controllers/expense.controller');
-const requireAuth = require('../middleware/auth.middleware');
-const validate = require('../middleware/validate.middleware');
-const {
+import express from 'express';
+import * as expenseController from '../controllers/expense.controller.js';
+import requireAuth from '../middleware/auth.middleware.js';
+import validate from '../middleware/validate.middleware.js';
+import {
   createExpenseSchema,
   updateExpenseSchema,
   listExpensesSchema,
   dailySummarySchema,
-} = require('../validators/expense.validator');
-const { idParamSchema } = require('../validators/common.validator');
+} from '../validators/expense.validator.js';
+import { idParamSchema } from '../validators/common.validator.js';
+
+const { Router } = express;
 
 const router = Router();
 
@@ -22,4 +24,4 @@ router.get('/:id', validate(idParamSchema), expenseController.getOne);
 router.put('/:id', validate(updateExpenseSchema), expenseController.update);
 router.delete('/:id', validate(idParamSchema), expenseController.remove);
 
-module.exports = router;
+export default router;

@@ -1,4 +1,4 @@
-const analyticsService = require('../services/analytics.service');
+import * as analyticsService from '../services/analytics.service.js';
 
 async function summary(req, res) {
   const { period, anchor } = req.valid.query;
@@ -12,4 +12,4 @@ async function trend(req, res) {
   res.status(200).json(result);
 }
 
-module.exports = { summary, trend };
+export { summary, trend };

@@ -1,4 +1,6 @@
-const { Schema, model } = require('mongoose');
+import mongoose from 'mongoose';
+
+const { Schema, model } = mongoose;
 
 /** See backend/docs/DATABASE.md for field-by-field rationale. */
 const userSchema = new Schema(
@@ -43,4 +45,4 @@ userSchema.set('toJSON', {
   },
 });
 
-module.exports = model('User', userSchema);
+export default model('User', userSchema);

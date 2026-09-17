@@ -1,11 +1,11 @@
-const User = require('../models/user.model');
-const otpService = require('./otp.service');
-const categoryService = require('./category.service');
-const expenseService = require('./expense.service');
-const Category = require('../models/category.model');
-const ApiError = require('../utils/ApiError');
-const { signToken } = require('../utils/jwt.util');
-const { hash, compareHash } = require('../utils/hash.util');
+import User from '../models/user.model.js';
+import * as otpService from './otp.service.js';
+import * as categoryService from './category.service.js';
+import * as expenseService from './expense.service.js';
+import Category from '../models/category.model.js';
+import ApiError from '../utils/ApiError.js';
+import { signToken } from '../utils/jwt.util.js';
+import { hash, compareHash } from '../utils/hash.util.js';
 
 async function requestOtp(phone) {
   return otpService.requestOtp(phone);
@@ -94,12 +94,4 @@ async function deleteAccount(userId) {
   await User.findByIdAndDelete(userId);
 }
 
-module.exports = {
-  requestOtp,
-  verifyOtpAndAuthenticate,
-  signupEmail,
-  loginEmail,
-  getProfile,
-  updateProfile,
-  deleteAccount,
-};
+export { requestOtp, verifyOtpAndAuthenticate, signupEmail, loginEmail, getProfile, updateProfile, deleteAccount };

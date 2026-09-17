@@ -1,11 +1,17 @@
-const { Router } = require('express');
+import express from 'express';
+import authRoutes from './auth.routes.js';
+import categoryRoutes from './category.routes.js';
+import expenseRoutes from './expense.routes.js';
+import analyticsRoutes from './analytics.routes.js';
+import exportRoutes from './export.routes.js';
 
+const { Router } = express;
 const router = Router();
 
-router.use('/auth', require('./auth.routes'));
-router.use('/categories', require('./category.routes'));
-router.use('/expenses', require('./expense.routes'));
-router.use('/analytics', require('./analytics.routes'));
-router.use('/export', require('./export.routes'));
+router.use('/auth', authRoutes);
+router.use('/categories', categoryRoutes);
+router.use('/expenses', expenseRoutes);
+router.use('/analytics', analyticsRoutes);
+router.use('/export', exportRoutes);
 
-module.exports = router;
+export default router;

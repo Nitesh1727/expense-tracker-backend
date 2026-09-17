@@ -1,4 +1,4 @@
-const categoryService = require('../services/category.service');
+import * as categoryService from '../services/category.service.js';
 
 async function list(req, res) {
   const categories = await categoryService.listCategories(req.userId);
@@ -20,4 +20,4 @@ async function remove(req, res) {
   res.status(204).send();
 }
 
-module.exports = { list, create, update, remove };
+export { list, create, update, remove };

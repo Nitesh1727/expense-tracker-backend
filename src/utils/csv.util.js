@@ -36,4 +36,4 @@ function expensesToCsv(expenses) {
   return [header, ...rows].map((row) => row.map(escapeCsvField).join(',')).join('\n');
 }
 
-module.exports = { expensesToCsv };
+export { expensesToCsv };

@@ -1,8 +1,8 @@
-const Otp = require('../models/otp.model');
-const ApiError = require('../utils/ApiError');
-const { hash, compareHash } = require('../utils/hash.util');
-const { generateOtpCode } = require('../utils/otp.util');
-const env = require('../config/env');
+import Otp from '../models/otp.model.js';
+import ApiError from '../utils/ApiError.js';
+import { hash, compareHash } from '../utils/hash.util.js';
+import { generateOtpCode } from '../utils/otp.util.js';
+import env from '../config/env.js';
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
@@ -57,4 +57,4 @@ async function verifyOtp(phone, code) {
   await otp.deleteOne();
 }
 
-module.exports = { requestOtp, verifyOtp };
+export { requestOtp, verifyOtp };

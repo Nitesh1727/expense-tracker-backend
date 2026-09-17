@@ -1,4 +1,6 @@
-const { Schema, model } = require('mongoose');
+import mongoose from 'mongoose';
+
+const { Schema, model } = mongoose;
 
 const expenseSchema = new Schema(
   {
@@ -16,4 +18,4 @@ const expenseSchema = new Schema(
 // Every real query filters by userId + a date range, then sorts by date desc.
 expenseSchema.index({ userId: 1, date: -1 });
 
-module.exports = model('Expense', expenseSchema);
+export default model('Expense', expenseSchema);

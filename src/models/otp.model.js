@@ -1,4 +1,6 @@
-const { Schema, model } = require('mongoose');
+import mongoose from 'mongoose';
+
+const { Schema, model } = mongoose;
 
 const otpSchema = new Schema(
   {
@@ -13,4 +15,4 @@ const otpSchema = new Schema(
 // TTL index — MongoDB auto-deletes the document once expiresAt passes, no cleanup job needed.
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-module.exports = model('Otp', otpSchema);
+export default model('Otp', otpSchema);

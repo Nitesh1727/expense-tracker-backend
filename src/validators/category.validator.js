@@ -1,5 +1,5 @@
-const { z } = require('zod');
-const { ICON_KEYS, COLOR_HEXES } = require('../constants/categoryPresets');
+import { z } from 'zod';
+import { ICON_KEYS, COLOR_HEXES } from '../constants/categoryPresets.js';
 
 const createCategorySchema = z.object({
   body: z.object({
@@ -18,4 +18,4 @@ const updateCategorySchema = z.object({
   }),
 });
 
-module.exports = { createCategorySchema, updateCategorySchema };
+export { createCategorySchema, updateCategorySchema };

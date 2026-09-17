@@ -1,4 +1,4 @@
-const env = require('../config/env');
+import env from '../config/env.js';
 
 /**
  * Single place that turns a thrown error into an HTTP response. Express 5
@@ -24,4 +24,4 @@ function errorMiddleware(err, req, res, next) {
   });
 }
 
-module.exports = errorMiddleware;
+export default errorMiddleware;

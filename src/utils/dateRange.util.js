@@ -69,4 +69,4 @@ function getTrendBucketUnit(period) {
   return period === 'year' ? 'month' : 'day';
 }
 
-module.exports = { PERIODS, getDateRange, getTrendBucketUnit };
+export { PERIODS, getDateRange, getTrendBucketUnit };

@@ -1,4 +1,4 @@
-const expenseService = require('../services/expense.service');
+import * as expenseService from '../services/expense.service.js';
 
 async function create(req, res) {
   const expense = await expenseService.createExpense(req.userId, req.valid.body);
@@ -30,4 +30,4 @@ async function remove(req, res) {
   res.status(204).send();
 }
 
-module.exports = { create, list, dailySummary, getOne, update, remove };
+export { create, list, dailySummary, getOne, update, remove };

@@ -4,9 +4,8 @@
  * keeps missing/malformed env vars a single, loud, early failure instead of
  * an undefined popping up somewhere deep in a service.
  */
-const { z } = require('zod');
-
-require('dotenv').config();
+import { z } from 'zod';
+import 'dotenv/config';
 
 const schema = z.object({
   PORT: z.coerce.number().default(4000),
@@ -24,4 +23,4 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-module.exports = parsed.data;
+export default parsed.data;

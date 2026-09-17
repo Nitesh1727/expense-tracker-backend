@@ -1,4 +1,4 @@
-const exportService = require('../services/export.service');
+import * as exportService from '../services/export.service.js';
 
 async function csv(req, res) {
   const csvBody = await exportService.exportCsv(req.userId, req.valid.query);
@@ -9,4 +9,4 @@ async function csv(req, res) {
   res.send(csvBody);
 }
 
-module.exports = { csv };
+export { csv };

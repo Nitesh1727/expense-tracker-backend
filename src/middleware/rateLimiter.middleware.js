@@ -1,4 +1,4 @@
-const rateLimit = require('express-rate-limit');
+import rateLimit from 'express-rate-limit';
 
 /** 5 OTP requests per phone-adjacent window is plenty for legitimate use, cheap to abuse otherwise. */
 const otpRequestLimiter = rateLimit({
@@ -26,4 +26,4 @@ const emailAuthLimiter = rateLimit({
   message: { error: { message: 'Too many attempts, please try again later' } },
 });
 
-module.exports = { otpRequestLimiter, otpVerifyLimiter, emailAuthLimiter };
+export { otpRequestLimiter, otpVerifyLimiter, emailAuthLimiter };

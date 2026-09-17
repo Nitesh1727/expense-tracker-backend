@@ -1,4 +1,4 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
 
@@ -46,11 +46,4 @@ const exportQuerySchema = z.object({
   }),
 });
 
-module.exports = {
-  createExpenseSchema,
-  updateExpenseSchema,
-  listExpensesSchema,
-  dailySummarySchema,
-  exportQuerySchema,
-  objectId,
-};
+export { createExpenseSchema, updateExpenseSchema, listExpensesSchema, dailySummarySchema, exportQuerySchema, objectId };

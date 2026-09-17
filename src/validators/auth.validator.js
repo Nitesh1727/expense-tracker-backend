@@ -1,4 +1,4 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 // E.164-ish: + followed by 8-15 digits. Good enough for v1 without a full phone-parsing library.
 const phoneSchema = z.string().regex(/^\+[1-9]\d{7,14}$/, 'Phone must be in E.164 format, e.g. +919876543210');
@@ -41,10 +41,4 @@ const updateProfileSchema = z.object({
   }),
 });
 
-module.exports = {
-  requestOtpSchema,
-  verifyOtpSchema,
-  signupEmailSchema,
-  loginEmailSchema,
-  updateProfileSchema,
-};
+export { requestOtpSchema, verifyOtpSchema, signupEmailSchema, loginEmailSchema, updateProfileSchema };

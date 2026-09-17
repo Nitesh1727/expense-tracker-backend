@@ -1,4 +1,4 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 const summarySchema = z.object({
   query: z.object({
@@ -14,4 +14,4 @@ const trendSchema = z.object({
   }),
 });
 
-module.exports = { summarySchema, trendSchema };
+export { summarySchema, trendSchema };

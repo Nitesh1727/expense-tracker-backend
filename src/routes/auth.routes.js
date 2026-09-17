@@ -1,15 +1,17 @@
-const { Router } = require('express');
-const authController = require('../controllers/auth.controller');
-const requireAuth = require('../middleware/auth.middleware');
-const validate = require('../middleware/validate.middleware');
-const { otpRequestLimiter, otpVerifyLimiter, emailAuthLimiter } = require('../middleware/rateLimiter.middleware');
-const {
+import express from 'express';
+import * as authController from '../controllers/auth.controller.js';
+import requireAuth from '../middleware/auth.middleware.js';
+import validate from '../middleware/validate.middleware.js';
+import { otpRequestLimiter, otpVerifyLimiter, emailAuthLimiter } from '../middleware/rateLimiter.middleware.js';
+import {
   requestOtpSchema,
   verifyOtpSchema,
   signupEmailSchema,
   loginEmailSchema,
   updateProfileSchema,
-} = require('../validators/auth.validator');
+} from '../validators/auth.validator.js';
+
+const { Router } = express;
 
 const router = Router();
 
@@ -21,4 +23,4 @@ router.get('/me', requireAuth, authController.getMe);
 router.patch('/me', requireAuth, validate(updateProfileSchema), authController.updateMe);
 router.delete('/me', requireAuth, authController.deleteMe);
 
-module.exports = router;
+export default router;

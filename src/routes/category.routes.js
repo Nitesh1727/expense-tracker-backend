@@ -1,9 +1,11 @@
-const { Router } = require('express');
-const categoryController = require('../controllers/category.controller');
-const requireAuth = require('../middleware/auth.middleware');
-const validate = require('../middleware/validate.middleware');
-const { createCategorySchema, updateCategorySchema } = require('../validators/category.validator');
-const { idParamSchema } = require('../validators/common.validator');
+import express from 'express';
+import * as categoryController from '../controllers/category.controller.js';
+import requireAuth from '../middleware/auth.middleware.js';
+import validate from '../middleware/validate.middleware.js';
+import { createCategorySchema, updateCategorySchema } from '../validators/category.validator.js';
+import { idParamSchema } from '../validators/common.validator.js';
+
+const { Router } = express;
 
 const router = Router();
 
@@ -14,4 +16,4 @@ router.post('/', validate(createCategorySchema), categoryController.create);
 router.put('/:id', validate(updateCategorySchema), categoryController.update);
 router.delete('/:id', validate(idParamSchema), categoryController.remove);
 
-module.exports = router;
+export default router;

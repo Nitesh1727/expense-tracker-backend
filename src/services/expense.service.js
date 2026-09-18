@@ -184,14 +184,22 @@ async function getDailySummary(userId, { from, to, categoryId, categoryIds, page
       $facet: {
         days: [{ $skip: (page - 1) * limit }, { $limit: limit }],
         totalCount: [{ $count: 'count' }],
+        // Sums the already-grouped per-day totals (computed above, before
+        // pagination) rather than re-summing raw documents — same idea as
+        // listExpenses' totalAmount: correct across every matching day
+        // regardless of how many pages have actually been fetched/loaded
+        // client-side. Powers the Search screen's day-tile view "Total"
+        // footer.
+        grandTotal: [{ $group: { _id: null, sum: { $sum: '$total' } } }],
       },
     },
   ]);
 
   const days = result.days.map((d) => ({ date: d._id, total: d.total, count: d.count }));
   const totalDays = result.totalCount[0]?.count ?? 0;
+  const totalAmount = result.grandTotal[0]?.sum ?? 0;
 
-  return { days, page, limit, totalDays, hasMore: page * limit < totalDays };
+  return { days, page, limit, totalDays, totalAmount, hasMore: page * limit < totalDays };
 }
 
 /** Used by both analytics and export — same filter shape as listExpenses, no pagination. */

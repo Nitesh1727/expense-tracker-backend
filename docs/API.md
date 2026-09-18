@@ -30,7 +30,7 @@ a user can never see/modify another user's expenses.
 | Method | Path | Body / Query | Notes |
 |--------|------|---------------|-------|
 | POST | `/` | `{ amount, description, categoryId, date? }` | `date` defaults to now if omitted. |
-| GET | `/` | query: `from?, to?, categoryId?, page?, limit?` | List, most recent first. Date range optional (unbounded if omitted); `from` inclusive, `to` **exclusive** — `[from, to)`, matching every other range in this API. Response items have `category` populated (`{id, name, icon, color}`), not just the raw id. |
+| GET | `/` | query: `from?, to?, categoryId?, page?, limit?` | List, most recent first. Date range optional (unbounded if omitted); `from` inclusive, `to` **exclusive** — `[from, to)`, matching every other range in this API. Response items have `category` populated (`{id, name, icon, color}`), not just the raw id. Response also includes `totalAmount`: the sum of `amount` across **every** matching document for the current filter (not just the current page) — powers the History screen's running total, which needs to be correct without loading every page. |
 | GET | `/daily-summary` | `page?, limit?` (default 15, max 60) | Powers the Home feed's collapsible day-tiles: one row per calendar day with an expense, `{date, total, count}`, newest first. Paginated by **number of days**, not number of expenses, so a page boundary never splits one day's total. Expand a tile client-side by calling the plain list endpoint above with that day as `{from, to}`. |
 | GET | `/:id` | — | Single expense, `category` populated. |
 | PUT | `/:id` | `{ amount?, description?, categoryId?, date? }` | Partial update. |

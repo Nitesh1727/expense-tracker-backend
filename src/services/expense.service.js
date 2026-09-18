@@ -49,16 +49,26 @@ async function listExpenses(userId, { from, to, categoryId, page, limit }) {
   }
   if (categoryId) filter.category = categoryId;
 
-  const [items, total] = await Promise.all([
+  // Same filter as find()/countDocuments() above, but aggregate() doesn't go
+  // through Mongoose's query-level casting — userId/category need to already
+  // be real ObjectIds here, or $match silently matches zero documents.
+  const aggregateFilter = { ...filter, userId: new mongoose.Types.ObjectId(userId) };
+  if (categoryId) aggregateFilter.category = new mongoose.Types.ObjectId(categoryId);
+
+  const [items, total, sumResult] = await Promise.all([
     Expense.find(filter)
       .sort({ date: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .populate('category'),
     Expense.countDocuments(filter),
+    // Sum across every matching document, not just this page — the History
+    // screen's "Total" footer needs the true total for the filter regardless
+    // of how many pages have been scrolled/loaded client-side.
+    Expense.aggregate([{ $match: aggregateFilter }, { $group: { _id: null, sum: { $sum: '$amount' } } }]),
   ]);
 
-  return { items, page, limit, total };
+  return { items, page, limit, total, totalAmount: sumResult[0]?.sum ?? 0 };
 }
 
 async function getExpenseById(userId, id) {

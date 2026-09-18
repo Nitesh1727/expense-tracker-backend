@@ -26,6 +26,10 @@ const listExpensesSchema = z.object({
     from: z.coerce.date().optional(),
     to: z.coerce.date().optional(),
     categoryId: objectId.optional(),
+    // Matches description (case-insensitive, partial) or an exact amount —
+    // see expense.service.js buildSearchClause for why those are the two
+    // interpretations of one search box rather than separate params.
+    q: z.string().trim().min(1).max(120).optional(),
     page: z.coerce.number().int().positive().default(1),
     limit: z.coerce.number().int().positive().max(100).default(20),
   }),
@@ -33,6 +37,8 @@ const listExpensesSchema = z.object({
 
 const dailySummarySchema = z.object({
   query: z.object({
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
     page: z.coerce.number().int().positive().default(1),
     limit: z.coerce.number().int().positive().max(60).default(15),
   }),

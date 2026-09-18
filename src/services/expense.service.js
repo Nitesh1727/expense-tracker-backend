@@ -3,6 +3,30 @@ import Expense from '../models/expense.model.js';
 import Category from '../models/category.model.js';
 import ApiError from '../utils/ApiError.js';
 
+// Mongo treats a $regex value as a pattern, not a literal string — an
+// unescaped search term containing regex metacharacters (e.g. "coffee (2)")
+// would either throw or match something the user never typed.
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * One search box, two interpretations: match `description` as a
+ * case-insensitive partial string, OR `amount` as an exact number if `q`
+ * parses as one (e.g. searching "500" finds every ₹500 expense exactly, not
+ * expenses merely *containing* "500" in the amount — a partial/substring
+ * match on a number is rarely what someone means by "search for 500 rupees").
+ * Both conditions apply (OR'd together) so a query that happens to look
+ * numeric still also matches a description containing those digits.
+ */
+function buildSearchClause(q) {
+  if (!q) return null;
+  const conditions = [{ description: { $regex: escapeRegExp(q), $options: 'i' } }];
+  const asNumber = Number(q);
+  if (!Number.isNaN(asNumber)) conditions.push({ amount: asNumber });
+  return { $or: conditions };
+}
+
 async function assertCategoryOwnedByUser(userId, categoryId) {
   const category = await Category.findOne({ _id: categoryId, userId });
   if (!category) {
@@ -32,7 +56,7 @@ async function createExpense(userId, { amount, description, categoryId, date }) 
   return result;
 }
 
-async function listExpenses(userId, { from, to, categoryId, page, limit }) {
+async function listExpenses(userId, { from, to, categoryId, q, page, limit }) {
   const filter = { userId };
   if (from || to) {
     filter.date = {};
@@ -48,6 +72,8 @@ async function listExpenses(userId, { from, to, categoryId, page, limit }) {
     if (to) filter.date.$lt = to;
   }
   if (categoryId) filter.category = categoryId;
+  const searchClause = buildSearchClause(q);
+  if (searchClause) Object.assign(filter, searchClause);
 
   // Same filter as find()/countDocuments() above, but aggregate() doesn't go
   // through Mongoose's query-level casting — userId/category need to already
@@ -117,11 +143,20 @@ async function deleteAllForUser(userId) {
  * Buckets in IST via $dateTrunc, matching analytics.service.js — see
  * backend/src/utils/dateRange.util.js for why UTC bucketing was wrong.
  */
-async function getDailySummary(userId, { page, limit }) {
+async function getDailySummary(userId, { from, to, page, limit }) {
   const userObjectId = new mongoose.Types.ObjectId(userId);
+  const match = { userId: userObjectId };
+  // Powers the Search screen's date-only results view (grouped day-tiles for
+  // a picked range) — Home's own call site omits from/to entirely, which
+  // keeps its existing "full history" behavior unchanged.
+  if (from || to) {
+    match.date = {};
+    if (from) match.date.$gte = from;
+    if (to) match.date.$lt = to; // exclusive, same convention as listExpenses
+  }
 
   const [result] = await Expense.aggregate([
-    { $match: { userId: userObjectId } },
+    { $match: match },
     {
       $group: {
         _id: { $dateTrunc: { date: '$date', unit: 'day', timezone: 'Asia/Kolkata' } },

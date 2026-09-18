@@ -56,7 +56,7 @@ async function createExpense(userId, { amount, description, categoryId, date }) 
   return result;
 }
 
-async function listExpenses(userId, { from, to, categoryId, q, page, limit }) {
+async function listExpenses(userId, { from, to, categoryId, categoryIds, q, page, limit }) {
   const filter = { userId };
   if (from || to) {
     filter.date = {};
@@ -71,7 +71,13 @@ async function listExpenses(userId, { from, to, categoryId, q, page, limit }) {
     // expense dated the 14th was also showing up under the 13th.
     if (to) filter.date.$lt = to;
   }
-  if (categoryId) filter.category = categoryId;
+  // categoryIds (multi-select) takes precedence over categoryId (single) —
+  // see the validator for why both exist.
+  if (categoryIds?.length) {
+    filter.category = { $in: categoryIds };
+  } else if (categoryId) {
+    filter.category = categoryId;
+  }
   const searchClause = buildSearchClause(q);
   if (searchClause) Object.assign(filter, searchClause);
 
@@ -79,7 +85,11 @@ async function listExpenses(userId, { from, to, categoryId, q, page, limit }) {
   // through Mongoose's query-level casting — userId/category need to already
   // be real ObjectIds here, or $match silently matches zero documents.
   const aggregateFilter = { ...filter, userId: new mongoose.Types.ObjectId(userId) };
-  if (categoryId) aggregateFilter.category = new mongoose.Types.ObjectId(categoryId);
+  if (categoryIds?.length) {
+    aggregateFilter.category = { $in: categoryIds.map((id) => new mongoose.Types.ObjectId(id)) };
+  } else if (categoryId) {
+    aggregateFilter.category = new mongoose.Types.ObjectId(categoryId);
+  }
 
   const [items, total, sumResult] = await Promise.all([
     Expense.find(filter)

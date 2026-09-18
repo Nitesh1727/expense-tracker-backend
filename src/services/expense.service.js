@@ -153,16 +153,21 @@ async function deleteAllForUser(userId) {
  * Buckets in IST via $dateTrunc, matching analytics.service.js — see
  * backend/src/utils/dateRange.util.js for why UTC bucketing was wrong.
  */
-async function getDailySummary(userId, { from, to, page, limit }) {
+async function getDailySummary(userId, { from, to, categoryId, categoryIds, page, limit }) {
   const userObjectId = new mongoose.Types.ObjectId(userId);
   const match = { userId: userObjectId };
-  // Powers the Search screen's date-only results view (grouped day-tiles for
-  // a picked range) — Home's own call site omits from/to entirely, which
-  // keeps its existing "full history" behavior unchanged.
+  // Powers the Search screen's grouped-by-day results view (date and/or
+  // category filters, no text query) — Home's own call site omits all of
+  // these, which keeps its existing "full history" behavior unchanged.
   if (from || to) {
     match.date = {};
     if (from) match.date.$gte = from;
     if (to) match.date.$lt = to; // exclusive, same convention as listExpenses
+  }
+  if (categoryIds?.length) {
+    match.category = { $in: categoryIds.map((id) => new mongoose.Types.ObjectId(id)) };
+  } else if (categoryId) {
+    match.category = new mongoose.Types.ObjectId(categoryId);
   }
 
   const [result] = await Expense.aggregate([

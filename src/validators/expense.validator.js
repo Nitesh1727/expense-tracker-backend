@@ -53,6 +53,8 @@ const dailySummarySchema = z.object({
   query: z.object({
     from: z.coerce.date().optional(),
     to: z.coerce.date().optional(),
+    categoryId: objectId.optional(),
+    categoryIds: objectIdList.optional(),
     page: z.coerce.number().int().positive().default(1),
     limit: z.coerce.number().int().positive().max(60).default(15),
   }),

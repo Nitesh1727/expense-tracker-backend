@@ -58,7 +58,7 @@ All routes require auth and are scoped to the current user.
 
 | Method | Path | Query | Notes |
 |--------|------|-------|-------|
-| GET | `/csv` | `from?, to?, category?` | Same filters as expense list (`to` exclusive). Returns `text/csv` with `Content-Disposition: attachment`. Columns: `date, category, description, amount`. |
+| GET | `/xlsx` | `from?, to?, categoryId?, label?` | Same filters as expense list (`to` exclusive). Returns a styled `.xlsx` workbook (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`) with `Content-Disposition: attachment`. One sheet: a title row, the expense table (`date, category, description, amount`) with a bolded total row beneath it, then a "By category" breakdown (`category, amount, % of total`). `label` (e.g. `"September 2026"`) is the human period label the Analytics screen already shows on-screen — reused verbatim as the sheet name (sanitized/truncated to Excel's 31-char, no-`: \ / ? * [ ]` limit) and the filename; falls back to `"All expenses"` if omitted. |
 
 ## Conventions
 

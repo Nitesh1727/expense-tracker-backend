@@ -10,6 +10,6 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.get('/csv', validate(exportQuerySchema), exportController.csv);
+router.get('/xlsx', validate(exportQuerySchema), exportController.xlsx);
 
 export default router;

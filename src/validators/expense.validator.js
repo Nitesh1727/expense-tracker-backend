@@ -65,6 +65,11 @@ const exportQuerySchema = z.object({
     from: z.coerce.date().optional(),
     to: z.coerce.date().optional(),
     categoryId: objectId.optional(),
+    // Human period label the Analytics screen already shows on-screen (e.g.
+    // "September 2026") — reused verbatim as the workbook's sheet name and
+    // filename rather than the backend re-deriving "is this a day/week/
+    // month/year or a custom range" from from/to alone.
+    label: z.string().trim().max(60).optional(),
   }),
 });
 

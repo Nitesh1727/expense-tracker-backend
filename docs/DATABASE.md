@@ -79,7 +79,7 @@ resist adding anything here that isn't asked for.
 | `_id`         | ObjectId | |
 | `userId`      | ObjectId, ref `User`, required | Every expense belongs to exactly one user. |
 | `amount`      | Number, required, min 0 | Stored as a plain number in the user's currency (see `users.currency`) — no multi-currency conversion in v1. |
-| `description` | String, required, max ~120 chars | Free text, kept short intentionally — this is a label, not notes. |
+| `description` | String, required, max 30 chars | Free text, kept short intentionally — this is a label, not notes. |
 | `category`    | ObjectId, ref `Category`, required | See `categories` collection below. |
 | `date`        | Date, required, default now | The date the expense actually happened — distinct from `createdAt`. This is what analytics filters and CSV export use. User can backdate an entry (e.g. logging yesterday's coffee). |
 | `createdAt` / `updatedAt` | Date (Mongoose timestamps) | Audit trail only — never used for filtering/analytics, that's what `date` is for. |

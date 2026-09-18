@@ -13,7 +13,7 @@ const objectIdList = z
 const createExpenseSchema = z.object({
   body: z.object({
     amount: z.number().positive(),
-    description: z.string().trim().min(1).max(120),
+    description: z.string().trim().min(1).max(30),
     categoryId: objectId,
     date: z.coerce.date().optional(),
   }),
@@ -23,7 +23,7 @@ const updateExpenseSchema = z.object({
   params: z.object({ id: objectId }),
   body: z.object({
     amount: z.number().positive().optional(),
-    description: z.string().trim().min(1).max(120).optional(),
+    description: z.string().trim().min(1).max(30).optional(),
     categoryId: objectId.optional(),
     date: z.coerce.date().optional(),
   }),

@@ -6,7 +6,7 @@ const expenseSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     amount: { type: Number, required: true, min: 0 },
-    description: { type: String, required: true, trim: true, maxlength: 120 },
+    description: { type: String, required: true, trim: true, maxlength: 30 },
     category: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
     // The date the expense happened — distinct from createdAt/updatedAt,
     // which are just the audit trail. Analytics/export filter on this.

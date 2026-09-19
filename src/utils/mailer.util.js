@@ -26,6 +26,15 @@ function getTransporter() {
   transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: env.SMTP_USER, pass: env.SMTP_APP_PASSWORD },
+    // Without these, a blocked/filtered outbound SMTP port (common on free
+    // hosting tiers — Render's among them) doesn't fail, it just hangs:
+    // the OS-level TCP timeout it falls back to can run well past a
+    // minute, and since every call site awaits this, that hang blocks the
+    // whole HTTP request (signup, etc.) for just as long. Caught live —
+    // signup never completed at all against the deployed backend.
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 10_000,
   });
   return transporter;
 }

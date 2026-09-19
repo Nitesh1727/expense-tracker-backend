@@ -144,35 +144,88 @@ number — a subtle bug. Always go through `req.valid`.
 
 Two independent paths, both producing the same shape of user (both seed
 default categories via `category.service.js` on creation — a brand new user
-should never hit the expense screen with an empty category list):
+should never hit the expense screen with an empty category list). The
+frontend currently only surfaces email+password in its UI (phone+OTP was
+dropped "for now" per explicit product decision — real SMS costs money at
+every provider, there's no free gateway); both paths still work identically
+at the API level, so re-adding the phone UI later is frontend-only.
 
 **Phone + OTP** — signup and login are the same flow, there's no separate
 "create account" step:
 1. `POST /api/auth/otp/request` — generate 6-digit code, hash it, store in
-   `otps` collection with a 5-minute TTL index, send via the SMS provider
-   interface (see below). Rate-limited per phone number.
+   `verificationcodes` (purpose `phone-login`) with a 5-minute TTL index,
+   send via the SMS provider interface (see below). Rate-limited per phone
+   number.
 2. `POST /api/auth/otp/verify` — check code against stored hash + expiry +
    attempt count. On success: find-or-create user by phone, issue JWT.
 
 **Email + password** — a normal separate signup/login pair:
 1. `POST /api/auth/signup/email` — 409 if the email is already registered,
-   otherwise hash the password (bcrypt) and create the user.
+   otherwise hash the password (bcrypt) and create the user. Best-effort
+   sends a verification email (see below) — signup succeeds either way.
 2. `POST /api/auth/login/email` — verify the password hash. Both a wrong
    email and a wrong password return the same 401 message, so a failed
    attempt never reveals whether an email is registered.
 
-**Optional profile completion, either path:** `PATCH /api/auth/me` accepts
-`{ name?, email? }` and is deliberately the *same* endpoint whether it's used
-right after signup (a skippable "tell us your name" prompt) or edited later
-from the Profile screen — no separate "complete profile" endpoint. Setting
-`email` here on a phone-signed-up account is just a contact-info field, not a
-second login credential, since no password gets attached by this call.
+**Profile editing:** `PATCH /api/auth/me` accepts `{ name?, avatar?,
+monthlyReportEnabled? }` and is deliberately the *same* endpoint for
+editing from the Profile screen and toggling the monthly-report setting —
+no separate endpoints for each. No `email` — per explicit product decision,
+an account's email is fixed once set (it's the verified login identity, not
+an editable contact-info field), so there's no path to change it after
+signup at all, not even a hidden one.
 
 **SMS provider is pluggable.** `services/otp.service.js` calls an injected
 `sendSms(phone, code)` function. Dev implementation logs the code to the
 console / includes it in the API response (never do this in production —
 gate behind `NODE_ENV !== 'production'`). Swap in a real provider (Twilio,
 MSG91, etc.) before launch — see `STATUS.md` open items.
+
+**`verificationcodes` is shared infrastructure** (`models/verificationCode.
+model.js`, `services/verificationCode.service.js`) — the same "hashed code,
+5-minute TTL, capped wrong-attempts" mechanics back phone login OTP, email
+verification, and password reset, distinguished by a `purpose` field so the
+three can never satisfy each other's lookups. `otp.service.js` is now a thin
+wrapper over this shared core (kept for its SMS-specific bits); email
+verification and password reset call the shared core directly from
+`auth.service.js`.
+
+**Email verification is a one-time confirmation, not a login gate** — per
+explicit product decision ("we will not verify everytime"), `emailVerified`
+is informational only (drives Profile's "verify your email" prompt); nothing
+currently blocks on it being `false`. `POST /api/auth/verify-email/resend`
++ `POST /api/auth/verify-email` (both authenticated) send and check the code.
+
+**Password reset** (`POST /api/auth/password/forgot` then `POST /api/auth/
+password/reset`) never reveals whether an email is registered — `forgot`
+always returns `{ success: true }`, including when the send itself fails,
+which matters just as much as the "unknown email" case (letting a send
+failure surface as an error would 500 *only* for a registered email, an
+enumeration leak by omission).
+
+**Email sending** (`utils/mailer.util.js`, `utils/emailTemplates.util.js`) —
+nodemailer over the account owner's own Gmail + an App Password
+(`SMTP_USER` / `SMTP_APP_PASSWORD` in `.env`; unset until configured, in
+which case any send throws a clear error rather than the whole server
+failing to boot). Every email embeds the app logo (`src/assets/logo.png`) as
+a `cid` attachment rather than a hosted image URL, since there's no public
+asset host. Three templates share one branded HTML shell: email
+verification, password reset (both a 6-digit code), and the monthly
+spending report (see below).
+
+**Monthly spending report** (`jobs/monthlyReport.job.js`) — a `node-cron`
+job, scheduled for 00:30 `Asia/Kolkata` every day regardless of server
+deploy timezone, that no-ops unless today is the 1st of the month (in IST)
+— "yesterday was the last day of last month" is true regardless of that
+month's actual length, so this needs no hardcoded Feb 28/29 handling. On a
+1st, for every user with `monthlyReportEnabled !== false` who has at least
+one expense last month: builds the same styled `.xlsx` workbook the Excel
+export feature uses (`utils/excel.util.js`), emails a summary (total +
+top-5 categories) with that workbook attached, and includes an unsubscribe
+link (`GET /api/public/unsubscribe/:token`, no auth — see `routes/
+public.routes.js`) that flips `monthlyReportEnabled` off without requiring
+a login, since it's opened from an email client. A user with zero expenses
+that month is skipped rather than sent an empty report.
 
 **JWT:** single access token, ~30 day expiry, sent as `Authorization: Bearer`.
 No refresh token flow for v1 — this is a personal finance app, not

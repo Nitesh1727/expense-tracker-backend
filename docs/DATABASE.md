@@ -23,12 +23,16 @@ don't add a field without updating this doc in the same change.
 |-----------------|---------|-------|
 | `_id`           | ObjectId | |
 | `name`          | String, optional | For personalization ("Hi, Nitesh") — not required at signup to keep signup minimal. |
+| `avatar`        | enum: `AVATAR_KEYS` (`constants/avatarPresets.js`), optional | A key the frontend maps to a bundled cartoon illustration (`assets/avatars/`), not a free-form string or an uploaded image — no upload/storage/moderation surface needed. `null` until the user picks one; the frontend falls back to the first letter of `name` until then. |
 | `email`         | String, unique, sparse | Sparse because a phone-only user won't have one. Lowercased before save. |
 | `phone`         | String, unique, sparse | Sparse for the same reason, reversed. E.164 format. |
 | `passwordHash`  | String, optional | Only set for email/password accounts. Never store plaintext. |
 | `authProvider`  | enum: `email`, `phone`, `google` | `google` reserved for future use — not active yet, but present now so adding Google Sign-In is additive, not a migration. |
 | `googleId`      | String, optional, sparse | Reserved for future Google Sign-In. Unused until that ships. |
 | `currency`      | String, default `INR` | Single default currency assumption for v1 (flagged as an open item in STATUS.md) — stored per-user rather than hardcoded so it's a one-field change to make it user-configurable later. |
+| `emailVerified` | Boolean, default `false` | Only meaningful for `authProvider: 'email'` — a phone-login account is implicitly verified by having proven ownership of the phone via OTP. Set `true` once the signup verification code (see `verificationcodes`, purpose `email-verify`) is confirmed. |
+| `monthlyReportEnabled` | Boolean, default `true` | Opt-out, not opt-in — the monthly report cron job (`src/jobs/monthlyReport.job.js`) only skips a user when this is explicitly `false`. Toggled from Settings, or via the no-login-required unsubscribe link every report email carries. |
+| `unsubscribeToken` | String, unique | Opaque, generated once at creation (`crypto.randomBytes`) — not derived from the user id, so it can't be guessed/enumerated from a leaked report email. Powers `GET /public/unsubscribe/:token`. |
 | `createdAt` / `updatedAt` | Date (Mongoose timestamps) | |
 
 **Why not a separate `profile` sub-document:** there's currently exactly one
@@ -50,24 +54,29 @@ that guarantees it never reaches a response regardless of how the document
 was loaded, rather than relying on remembering to `.select('-passwordHash')`
 at every call site.
 
-## `otps`
+## `verificationcodes`
 
 Short-lived, not user-facing data — a separate collection rather than fields
 on `users` so it can have its own TTL expiry and doesn't bloat the user
-document with auth-flow noise.
+document with auth-flow noise. Was `otps` (phone login only); generalized to
+also back email verification and password reset once those needed the same
+mechanics — `purpose` keeps the three from ever matching each other's
+lookups even if the same phone/email is mid-flow on more than one at once.
 
 | Field        | Type   | Notes |
 |--------------|--------|-------|
 | `_id`        | ObjectId | |
-| `phone`      | String | The phone number the code was issued for. |
-| `codeHash`   | String | Hashed OTP (never store the raw code). |
+| `phone`      | String, optional | Set for `purpose: 'phone-login'`. |
+| `email`      | String, optional | Set for `purpose: 'email-verify'` / `'password-reset'`. |
+| `purpose`    | enum: `phone-login`, `email-verify`, `password-reset` | |
+| `codeHash`   | String | Hashed code (never store the raw value). |
 | `attempts`   | Number, default 0 | Incremented on each failed verify; service rejects after 5. |
 | `expiresAt`  | Date | Set to now + 5 minutes at creation. |
 | `createdAt`  | Date | |
 
 **Indexes:** TTL index on `expiresAt` (`expireAfterSeconds: 0`) — MongoDB
-auto-deletes expired OTP docs, no manual cleanup job needed. Non-unique index
-on `phone` for lookup during verify.
+auto-deletes expired codes, no manual cleanup job needed. Non-unique indexes
+on `phone` and `email` for lookup during verify.
 
 ## `expenses`
 

@@ -1,4 +1,6 @@
+import crypto from 'node:crypto';
 import mongoose from 'mongoose';
+import { AVATAR_KEYS } from '../constants/avatarPresets.js';
 
 const { Schema, model } = mongoose;
 
@@ -6,6 +8,11 @@ const { Schema, model } = mongoose;
 const userSchema = new Schema(
   {
     name: { type: String, trim: true },
+    // A key the frontend maps to a bundled cartoon illustration
+    // (assets/avatars/) — not a free-form string or an uploaded image, see
+    // avatarPresets.js for why. null until the user picks one; the
+    // frontend falls back to their name's first letter until then.
+    avatar: { type: String, enum: AVATAR_KEYS, default: null },
     email: {
       type: String,
       trim: true,
@@ -27,6 +34,18 @@ const userSchema = new Schema(
     },
     googleId: { type: String, sparse: true },
     currency: { type: String, default: 'INR' },
+    // Only meaningful for authProvider: 'email' — a phone-login account is
+    // implicitly verified by having proven ownership of the phone via OTP.
+    emailVerified: { type: Boolean, default: false },
+    // Default on, matching "opt-out, not opt-in" for the monthly report
+    // per explicit product decision — a user can flip this off in Settings,
+    // or via the no-login-required unsubscribe link every report email
+    // carries (see routes/public.routes.js).
+    monthlyReportEnabled: { type: Boolean, default: true },
+    // Opaque per-user token for that unsubscribe link — generated once, at
+    // creation, rather than derived from the user id, so it can't be
+    // guessed/enumerated from a leaked report email.
+    unsubscribeToken: { type: String, unique: true, default: () => crypto.randomBytes(24).toString('hex') },
   },
   { timestamps: true },
 );

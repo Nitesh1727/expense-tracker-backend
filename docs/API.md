@@ -9,18 +9,35 @@ probably right and this doc is stale; fix whichever is wrong.
 
 ## Auth — `/api/auth`
 
-v1 is OTP-only — signup and login are the same flow (email/password is
-schema-ready for later but has no endpoints yet, see DATABASE.md).
+Email+password is the frontend's only reachable sign-in flow right now —
+phone+OTP still exists here and works exactly as before, but the frontend
+dropped its own UI for it "for now" (see frontend's WelcomeScreen doc
+comment); re-adding that UI needs no backend work.
 
 | Method | Path | Auth? | Body | Notes |
 |--------|------|-------|------|-------|
 | POST | `/otp/request` | No | `{ phone }` | Generates + sends OTP. Rate-limited. Returns `{ success: true }` (dev env also echoes the code — see ARCHITECTURE.md). |
 | POST | `/otp/verify` | No | `{ phone, code }` | Verifies code; finds-or-creates user (seeding default categories if new); returns `{ user, token, isNewUser }` — the frontend uses `isNewUser` to decide whether to show the optional "tell us your name" prompt. |
-| POST | `/signup/email` | No | `{ email, password, name? }` | Creates a user the same way as the OTP path (seeds default categories). 409 if the email is already registered. |
+| POST | `/signup/email` | No | `{ email, password, name? }` | Creates a user the same way as the OTP path (seeds default categories). 409 if the email is already registered. Best-effort sends a verification email (see `/verify-email` below) — signup still succeeds even if that send fails. |
 | POST | `/login/email` | No | `{ email, password }` | 401 on either a wrong email or wrong password — never reveals which, to avoid leaking whether an email is registered. |
+| POST | `/verify-email/resend` | Yes | — | Sends a fresh 6-digit code to the current user's email. Rate-limited. |
+| POST | `/verify-email` | Yes | `{ code }` | Verifies the code, sets `user.emailVerified = true`, returns `{ user }`. Not a login gate (see auth.service.js's class-level note) — an unverified account can use the app fully; this is a one-time confirmation whenever the user gets to it. |
+| POST | `/password/forgot` | No | `{ email }` | Sends a 6-digit reset code if that email has a password-based account. Always returns `{ success: true }` regardless — including for an unregistered email or a send failure — so this can never be used to check which emails are registered. |
+| POST | `/password/reset` | No | `{ email, code, newPassword }` | Verifies the code and sets the new password. |
+| POST | `/password/change` | Yes | `{ currentPassword, newPassword }` | Settings → Account's "Change password" — proves ownership via the current password instead of an emailed code, unlike `/password/reset`. 401 if `currentPassword` is wrong; 400 if the account has no password to change (a phone-only account). |
 | GET | `/me` | Yes | — | Returns current user profile. |
-| PATCH | `/me` | Yes | `{ name?, email? }` | Partial profile update — used for both the optional post-signup "complete your profile" prompt and later edits from the Profile screen. Works regardless of signup method; setting `email` here is just a contact-info field, not a second login method (no password gets attached). 409 if the email is already used by another account. |
+| PATCH | `/me` | Yes | `{ name?, avatar?, monthlyReportEnabled? }` | Partial profile update — used for profile edits and the Settings monthly-report toggle. No `email` — an account's email is fixed once set (it's the verified login identity), not an editable contact-info field. `avatar` must be one of `AVATAR_KEYS` (`constants/avatarPresets.js`) — a key, not the image itself; the frontend maps it to a bundled illustration. |
 | DELETE | `/me` | Yes | — | Deletes account + cascades delete of the user's expenses and categories. Store-compliance requirement, not optional. |
+
+## Public — `/api/public`
+
+No auth — reached from outside the app (a link in an email), not called
+by the frontend.
+
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/unsubscribe/:token` | Turns off `monthlyReportEnabled` for whichever user owns that `unsubscribeToken` (see DATABASE.md's `users` table). Returns a plain HTML confirmation page, not JSON — for a person opening the link directly in a browser. Silently no-ops for an unknown/already-used token. |
+| POST | `/unsubscribe/:token` | Same effect, no body/content back — this is what Gmail/Outlook's own native one-click "Unsubscribe" button hits automatically (RFC 8058's `List-Unsubscribe-Post`, set on every monthly report email — see mailer.util.js), not something the frontend or a person calls directly. |
 
 ## Expenses — `/api/expenses`
 

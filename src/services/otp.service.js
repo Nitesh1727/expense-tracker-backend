@@ -1,16 +1,14 @@
-import Otp from '../models/otp.model.js';
 import ApiError from '../utils/ApiError.js';
-import { hash, compareHash } from '../utils/hash.util.js';
-import { generateOtpCode } from '../utils/otp.util.js';
 import env from '../config/env.js';
-
-const OTP_TTL_MS = 5 * 60 * 1000;
-const MAX_ATTEMPTS = 5;
+import * as verificationCodeService from './verificationCode.service.js';
 
 /**
  * SMS sending is behind this one function so swapping in a real provider
  * (Twilio, MSG91, ...) later is a one-function change. Dev mode logs the
- * code instead of sending it — there's no provider configured yet.
+ * code instead of sending it — there's no provider configured yet. Left
+ * running even though the frontend currently only surfaces email+password
+ * (see frontend's WelcomeScreen doc comment) — re-adding the phone UI later
+ * needs no backend work.
  */
 async function sendSms(phone, code) {
   if (env.SMS_PROVIDER === 'dev') {
@@ -21,10 +19,7 @@ async function sendSms(phone, code) {
 }
 
 async function requestOtp(phone) {
-  const code = generateOtpCode();
-  const codeHash = await hash(code);
-
-  await Otp.create({ phone, codeHash, expiresAt: new Date(Date.now() + OTP_TTL_MS) });
+  const code = await verificationCodeService.issueCode({ field: 'phone', value: phone, purpose: 'phone-login' });
   await sendSms(phone, code);
 
   // Dev convenience only — never expose the code in a response in production.
@@ -32,29 +27,7 @@ async function requestOtp(phone) {
 }
 
 async function verifyOtp(phone, code) {
-  const otp = await Otp.findOne({ phone }).sort({ createdAt: -1 });
-
-  if (!otp) {
-    throw new ApiError(400, 'No OTP was requested for this phone number');
-  }
-
-  if (otp.expiresAt < new Date()) {
-    throw new ApiError(400, 'OTP has expired, request a new one');
-  }
-
-  if (otp.attempts >= MAX_ATTEMPTS) {
-    throw new ApiError(429, 'Too many incorrect attempts, request a new OTP');
-  }
-
-  const isValid = await compareHash(code, otp.codeHash);
-
-  if (!isValid) {
-    otp.attempts += 1;
-    await otp.save();
-    throw new ApiError(400, 'Incorrect OTP');
-  }
-
-  await otp.deleteOne();
+  await verificationCodeService.verifyCode({ field: 'phone', value: phone, purpose: 'phone-login', code });
 }
 
 export { requestOtp, verifyOtp };

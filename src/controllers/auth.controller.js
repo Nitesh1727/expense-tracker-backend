@@ -17,6 +17,33 @@ async function signupEmail(req, res) {
   res.status(201).json({ user, token });
 }
 
+async function resendVerification(req, res) {
+  await authService.resendVerificationEmail(req.userId);
+  res.status(200).json({ success: true });
+}
+
+async function verifyEmail(req, res) {
+  const user = await authService.verifyEmail(req.userId, req.valid.body.code);
+  res.status(200).json({ user });
+}
+
+async function forgotPassword(req, res) {
+  await authService.requestPasswordReset(req.valid.body.email);
+  // Always success — see auth.service.requestPasswordReset for why this
+  // can't reveal whether the email has an account.
+  res.status(200).json({ success: true });
+}
+
+async function resetPassword(req, res) {
+  await authService.resetPassword(req.valid.body);
+  res.status(200).json({ success: true });
+}
+
+async function changePassword(req, res) {
+  await authService.changePassword(req.userId, req.valid.body);
+  res.status(200).json({ success: true });
+}
+
 async function loginEmail(req, res) {
   const { user, token } = await authService.loginEmail(req.valid.body);
   res.status(200).json({ user, token });
@@ -37,4 +64,17 @@ async function deleteMe(req, res) {
   res.status(204).send();
 }
 
-export { requestOtp, verifyOtp, signupEmail, loginEmail, getMe, updateMe, deleteMe };
+export {
+  requestOtp,
+  verifyOtp,
+  signupEmail,
+  resendVerification,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
+  changePassword,
+  loginEmail,
+  getMe,
+  updateMe,
+  deleteMe,
+};
